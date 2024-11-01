@@ -1,0 +1,25 @@
+# Wybierz obraz bazowy z CUDA i PyTorch
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime AS base
+
+# Instalacja zależności systemowych
+RUN apt update && apt install -y \
+        build-essential \
+        python3-dev \
+        pkg-config \
+        git \
+    && apt clean
+
+# Instalacja pakietów pythona
+COPY requirements.txt /home/user/autoencoders/requirements.txt
+RUN pip install --no-cache-dir -r /home/user/autoencoders/requirements.txt
+
+# Tworzenie użytkownika
+ENV UID=1001 GID=1001
+RUN addgroup --gid ${GID} --system user && \
+    adduser --shell /bin/bash --disabled-password --uid ${UID} --system --group user
+
+# Konfiguracja końcowa
+USER user
+WORKDIR /home/user/autoencoders
+USER user
+CMD ["bash"]

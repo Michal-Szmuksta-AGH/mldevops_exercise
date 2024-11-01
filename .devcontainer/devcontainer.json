@@ -1,0 +1,30 @@
+{
+    "name": "autoencoders",
+    "build": {
+        "dockerfile": "dockerfile",
+        "context": ".."
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "files.autoSave": "afterDelay",
+                "terminal.integrated.shell.linux": "/bin/bash",
+                "python.defaultInterpreterPath": "/opt/conda/bin/python",
+                "jupyter.kernels.excludePythonEnvironments": [
+                    "/bin/python3",
+		            "/usr/bin/python3"
+                ]
+            },
+            "extensions": [
+                "ms-python.python",
+                "ms-azuretools.vscode-docker",
+                "ms-toolsai.jupyter",
+                "GitHub.copilot"
+            ]
+        }
+    },
+    "runArgs": [
+        "--gpus", "all"
+    ],
+    "remoteUser": "user"
+}
