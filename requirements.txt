@@ -1,2 +1,10 @@
+# dev tools
 jupyterlab
 matplotlib
+
+# automation tools
+black
+black[jupyter]
+codespell
+pyupgrade
+pre-commit

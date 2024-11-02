@@ -19,7 +19,8 @@
                 "ms-python.python",
                 "ms-azuretools.vscode-docker",
                 "ms-toolsai.jupyter",
-                "GitHub.copilot"
+                "GitHub.copilot",
+                "mhutchie.git-graph"
             ]
         }
     },
