@@ -16,11 +16,6 @@ WORKDIR /home/user/autoencoders
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Instalacja hooków
-COPY .pre-commit-config.yaml .
-COPY .git .git
-RUN pre-commit install --install-hooks
-
 # Tworzenie użytkownika
 ENV UID=1001 GID=1001
 RUN addgroup --gid ${GID} --system user && \
@@ -28,4 +23,4 @@ RUN addgroup --gid ${GID} --system user && \
 
 # Konfiguracja końcowa
 USER user
-ENTRYPOINT ["bash"]
+ENTRYPOINT ["sh", "-c", "pre-commit install --install-hooks && exec bash"]
