@@ -9,12 +9,17 @@ RUN apt update && apt install -y \
         git \
     && apt clean
 
+# Ustawienie katalogu roboczego
+WORKDIR /home/user/autoencoders
+
 # Instalacja pakietów pythona
-COPY requirements.txt /home/user/autoencoders/requirements.txt
-RUN pip install --no-cache-dir -r /home/user/autoencoders/requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Instalacja hooków
-RUN pre-commit install
+COPY .pre-commit-config.yaml .
+COPY .git .git
+RUN pre-commit install --install-hooks
 
 # Tworzenie użytkownika
 ENV UID=1001 GID=1001
@@ -23,5 +28,4 @@ RUN addgroup --gid ${GID} --system user && \
 
 # Konfiguracja końcowa
 USER user
-WORKDIR /home/user/autoencoders
-CMD ["bash"]
+ENTRYPOINT ["bash"]
