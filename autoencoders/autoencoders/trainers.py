@@ -4,6 +4,10 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import wandb
+import optuna
+from optuna.integration.wandb import WeightsAndBiasesCallback
+from optuna.exceptions import TrialPruned
+from optuna_dashboard import run_server
 
 
 class FashionMNISTTrainer:
@@ -33,17 +37,17 @@ class FashionMNISTTrainer:
         self.train_loss_history = []
         self.test_loss_history = []
 
-        wandb.init(project="fashion-mnist", config={
-            "learning_rate": self.learning_rate,
-            "batch_size": self.batch_size,
-            "num_epochs": self.num_epochs,
-            "device": str(self.device)
-        })
+        wandb.init(
+            project="fashion-mnist",
+            config={
+                "learning_rate": self.learning_rate,
+                "batch_size": self.batch_size,
+                "num_epochs": self.num_epochs,
+                "device": str(self.device),
+            },
+        )
 
     def calculate_loss(self, loader):
-        raise NotImplementedError("Subclasses should implement this method")
-
-    def train(self):
         raise NotImplementedError("Subclasses should implement this method")
 
     def plot_loss(self):
@@ -61,6 +65,35 @@ class FashionMNISTTrainer:
         torch.save(self.model.state_dict(), path)
         wandb.save(path)
 
+    def optimize_hyperparameters(
+        self, n_trials=100, num_epochs=5, learning_rate_range=(1e-5, 1e-1), batch_size_options=[32, 64, 128, 256]
+    ):
+        def objective(trial):
+            learning_rate = trial.suggest_loguniform("learning_rate", *learning_rate_range)
+            batch_size = trial.suggest_categorical("batch_size", batch_size_options)
+
+            self.learning_rate = learning_rate
+            self.batch_size = batch_size
+            self.train_loader = DataLoader(dataset=self.train_dataset, batch_size=self.batch_size, shuffle=True)
+            self.test_loader = DataLoader(dataset=self.test_dataset, batch_size=self.batch_size, shuffle=False)
+            self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
+
+            try:
+                self.train(num_epochs=num_epochs, trial=trial)
+            except TrialPruned:
+                raise
+
+            test_loss = self.calculate_loss(self.test_loader)
+
+            return test_loss
+
+        wandb_callback = WeightsAndBiasesCallback(metric_name="test_loss")
+        storage = optuna.storages.InMemoryStorage()
+        study = optuna.create_study(direction="minimize", storage=storage)
+        study.optimize(objective, n_trials=n_trials, callbacks=[wandb_callback])
+        print(f"Best hyperparameters: {study.best_params}")
+        run_server(storage)
+
 
 class ClassificationTrainer(FashionMNISTTrainer):
     def __init__(
@@ -69,6 +102,9 @@ class ClassificationTrainer(FashionMNISTTrainer):
         super().__init__(model, criterion, learning_rate, batch_size, num_epochs, data_path, device)
         self.train_accuracy_history = []
         self.test_accuracy_history = []
+
+    def calculate_loss(self, loader):
+        return self.calculate_loss_and_accuracy(loader)[0]
 
     def calculate_loss_and_accuracy(self, loader):
         self.model.eval()
@@ -87,8 +123,9 @@ class ClassificationTrainer(FashionMNISTTrainer):
         accuracy = 100 * correct / total
         return running_loss / len(loader), accuracy
 
-    def train(self):
-        for epoch in range(self.num_epochs):
+    def train(self, num_epochs=None, trial=None):
+        num_epochs = num_epochs if num_epochs else self.num_epochs
+        for epoch in range(num_epochs):
             self.model.train()
             running_loss = 0.0
             correct = 0
@@ -115,16 +152,23 @@ class ClassificationTrainer(FashionMNISTTrainer):
             self.train_accuracy_history.append(train_accuracy)
             self.test_accuracy_history.append(test_accuracy)
 
-            print(
-                f"Epoch [{epoch+1}/{self.num_epochs}], Train Accuracy: {train_accuracy:.2f}%, Test Accuracy: {test_accuracy:.2f}%"
-            )
-            wandb.log({
-                "Epoch": epoch + 1,
-                "Train Loss": train_loss,
-                "Test Loss": test_loss,
-                "Train Accuracy": train_accuracy,
-                "Test Accuracy": test_accuracy
-            })
+            if not trial:
+                print(
+                    f"Epoch [{epoch+1}/{num_epochs}], Train Accuracy: {train_accuracy:.2f}%, Test Accuracy: {test_accuracy:.2f}%"
+                )
+                wandb.log(
+                    {
+                        "Epoch": epoch + 1,
+                        "Train Loss": train_loss,
+                        "Test Loss": test_loss,
+                        "Train Accuracy": train_accuracy,
+                        "Test Accuracy": test_accuracy,
+                    }
+                )
+            else:
+                trial.report(test_loss, epoch)
+                if trial.should_prune():
+                    raise TrialPruned()
 
     def plot_accuracy(self):
         plt.figure(figsize=(10, 5))
@@ -150,8 +194,9 @@ class AutoencoderTrainer(FashionMNISTTrainer):
                 running_loss += loss.item()
         return running_loss / len(loader)
 
-    def train(self):
-        for epoch in range(self.num_epochs):
+    def train(self, num_epochs=None, trial=None):
+        num_epochs = num_epochs if num_epochs else self.num_epochs
+        for epoch in range(num_epochs):
             self.model.train()
             running_loss = 0.0
             for images, _ in self.train_loader:
@@ -170,9 +215,10 @@ class AutoencoderTrainer(FashionMNISTTrainer):
             self.train_loss_history.append(train_loss)
             self.test_loss_history.append(test_loss)
 
-            print(f"Epoch [{epoch+1}/{self.num_epochs}], Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}")
-            wandb.log({
-                "Epoch": epoch + 1,
-                "Train Loss": train_loss,
-                "Test Loss": test_loss
-            })
+            if not trial:
+                print(f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}")
+                wandb.log({"Epoch": epoch + 1, "Train Loss": train_loss, "Test Loss": test_loss})
+            else:
+                trial.report(test_loss, epoch)
+                if trial.should_prune():
+                    raise TrialPruned()
