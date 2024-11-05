@@ -10,8 +10,8 @@
                 "files.autoSave": "afterDelay",
                 "terminal.integrated.shell.linux": "/bin/bash",
                 "python.defaultInterpreterPath": "/opt/conda/bin/python",
-                "python.autoComplete.extraPaths":[
-                    "./autoencoders"
+                "python.analysis.extraPaths": [
+                    "/workspaces/mldevops_exercise/autoencoders"
                 ],
                 "jupyter.kernels.excludePythonEnvironments": [
                     "/bin/python3",
