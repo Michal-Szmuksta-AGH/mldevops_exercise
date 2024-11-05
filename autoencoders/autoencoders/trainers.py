@@ -3,6 +3,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+import wandb
 
 
 class FashionMNISTTrainer:
@@ -32,6 +33,13 @@ class FashionMNISTTrainer:
         self.train_loss_history = []
         self.test_loss_history = []
 
+        wandb.init(project="fashion-mnist", config={
+            "learning_rate": self.learning_rate,
+            "batch_size": self.batch_size,
+            "num_epochs": self.num_epochs,
+            "device": str(self.device)
+        })
+
     def calculate_loss(self, loader):
         raise NotImplementedError("Subclasses should implement this method")
 
@@ -47,9 +55,11 @@ class FashionMNISTTrainer:
         plt.ylabel("Loss")
         plt.legend()
         plt.show()
+        wandb.log({"Train Loss": self.train_loss_history, "Test Loss": self.test_loss_history})  # Log to wandb
 
     def save_model(self, path="model.pth"):
         torch.save(self.model.state_dict(), path)
+        wandb.save(path)
 
 
 class ClassificationTrainer(FashionMNISTTrainer):
@@ -108,6 +118,13 @@ class ClassificationTrainer(FashionMNISTTrainer):
             print(
                 f"Epoch [{epoch+1}/{self.num_epochs}], Train Accuracy: {train_accuracy:.2f}%, Test Accuracy: {test_accuracy:.2f}%"
             )
+            wandb.log({
+                "Epoch": epoch + 1,
+                "Train Loss": train_loss,
+                "Test Loss": test_loss,
+                "Train Accuracy": train_accuracy,
+                "Test Accuracy": test_accuracy
+            })
 
     def plot_accuracy(self):
         plt.figure(figsize=(10, 5))
@@ -118,6 +135,7 @@ class ClassificationTrainer(FashionMNISTTrainer):
         plt.ylabel("Accuracy (%)")
         plt.legend()
         plt.show()
+        wandb.log({"Train Accuracy": self.train_accuracy_history, "Test Accuracy": self.test_accuracy_history})
 
 
 class AutoencoderTrainer(FashionMNISTTrainer):
@@ -153,3 +171,8 @@ class AutoencoderTrainer(FashionMNISTTrainer):
             self.test_loss_history.append(test_loss)
 
             print(f"Epoch [{epoch+1}/{self.num_epochs}], Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}")
+            wandb.log({
+                "Epoch": epoch + 1,
+                "Train Loss": train_loss,
+                "Test Loss": test_loss
+            })
