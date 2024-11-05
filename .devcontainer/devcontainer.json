@@ -10,6 +10,9 @@
                 "files.autoSave": "afterDelay",
                 "terminal.integrated.shell.linux": "/bin/bash",
                 "python.defaultInterpreterPath": "/opt/conda/bin/python",
+                "python.autoComplete.extraPaths":[
+                    "./autoencoders"
+                ],
                 "jupyter.kernels.excludePythonEnvironments": [
                     "/bin/python3",
 		            "/usr/bin/python3"
@@ -27,5 +30,5 @@
     "runArgs": [
         "--gpus", "all"
     ],
-    "remoteUser": "user"
+    "remoteUser": "root"
 }
