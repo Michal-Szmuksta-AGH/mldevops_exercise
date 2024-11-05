@@ -3,10 +3,10 @@ FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime AS base
 
 # Instalacja zależności systemowych
 RUN apt update && apt install -y \
-        build-essential \
-        python3-dev \
-        pkg-config \
-        git \
+    build-essential \
+    python3-dev \
+    pkg-config \
+    git \
     && apt clean
 
 # Ustawienie katalogu roboczego
@@ -15,6 +15,22 @@ WORKDIR /home/user/autoencoders
 # Instalacja pakietów pythona
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Instalacja pakietów pythona niezbęddnych do automatyzacji
+RUN pip install --no-cache-dir \
+    black \
+    black[jupyter] \
+    codespell \
+    pyupgrade \
+    pre-commit
+
+# Instalacja pipx i poetry
+RUN python3 -m pip install --user pipx && \
+    python3 -m pipx ensurepath && \
+    python3 -m pipx completions && \
+    python3 -m pipx install poetry
+
+RUN echo "eval \"\$(register-python-argcomplete pipx)\"" >> ~/.bashrc
 
 # Tworzenie użytkownika
 ENV UID=1001 GID=1001
