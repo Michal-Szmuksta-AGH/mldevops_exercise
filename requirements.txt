@@ -5,3 +5,7 @@ optuna
 optuna-dashboard
 optuna-integration[wandb]
 jupyterlab-optuna
+minisom
+scikit-learn
+pandas
+hyperopt
