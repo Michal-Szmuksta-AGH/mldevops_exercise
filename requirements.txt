@@ -9,3 +9,4 @@ minisom
 scikit-learn
 pandas
 hyperopt
+jdc
